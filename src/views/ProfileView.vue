@@ -115,7 +115,7 @@ const handlePlaceOrder = async () => {
                  <span class="font-bold font-mono">{{ authStore.member?.email.split('@')[0] }}</span>
                </div>
                <div class="flex justify-between items-center text-xs">
-                 <span class="text-white/40 uppercase font-black tracking-widest">Sanctuary</span>
+                 <span class="text-white/40 uppercase font-black tracking-widest">Home Store</span>
                  <span class="font-black uppercase">{{ getStoreName(authStore.member?.home_store) }}</span>
                </div>
              </div>
@@ -126,7 +126,7 @@ const handlePlaceOrder = async () => {
         <div class="bg-white p-10 rounded-[40px] border border-border-joe shadow-sm space-y-6">
           <h3 class="text-xs font-black uppercase tracking-[0.2em] text-highlight flex items-center gap-2">
             <MapPin :size="16" />
-            Collection Point
+            Store Selection
           </h3>
           <select 
             v-model="cartStore.selectedStoreId"
@@ -211,7 +211,7 @@ const handlePlaceOrder = async () => {
 
           <!-- Order History -->
           <div class="space-y-8 pt-8">
-            <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-highlight border-b border-border-joe pb-4">Chronological Records</h3>
+            <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-highlight border-b border-border-joe pb-4">Order History</h3>
             
             <div v-if="orders.length === 0" class="text-center py-20 bg-white rounded-[40px] border-2 border-dashed border-border-joe">
               <Clock :size="48" class="mx-auto mb-4 opacity-10" />
