@@ -46,7 +46,7 @@ const handleLogin = async () => {
                 type="email" 
                 required
                 placeholder="JOE@UNCLEJOES.COM"
-                class="w-full px-6 py-5 bg-cream-joe border-2 border-border-joe rounded-2xl font-black text-xs uppercase tracking-widest focus:outline-none focus:border-mocha transition-all"
+                class="w-full px-6 py-5 bg-cream-joe border-2 border-border-joe rounded-2xl font-sans font-medium text-sm normal-case tracking-normal focus:outline-none focus:border-mocha transition-all"
               />
             </div>
           </div>
@@ -59,7 +59,7 @@ const handleLogin = async () => {
                 type="password" 
                 required
                 placeholder="••••••••"
-                class="w-full px-6 py-5 bg-cream-joe border-2 border-border-joe rounded-2xl font-black text-xs uppercase tracking-widest focus:outline-none focus:border-mocha transition-all"
+                class="w-full px-6 py-5 bg-cream-joe border-2 border-border-joe rounded-2xl font-sans font-medium text-sm normal-case tracking-normal focus:outline-none focus:border-mocha transition-all"
               />
             </div>
           </div>
