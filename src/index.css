@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Georgia", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  
+  --color-mocha: #4b3621;
+  --color-highlight: #8c7355;
+  --color-border-joe: #dcd0c0;
+  --color-cream-joe: #fdfbf7;
+  --color-ink: #1a1a1a;
+  --color-latte: #c0a080;
+}
+
+@layer base {
+  body {
+    @apply bg-cream-joe text-ink antialiased;
+  }
+  
+  h1, h2, h3, h4, .heading-serif {
+    @apply font-serif font-black uppercase tracking-tighter;
+  }
+}
