@@ -5,7 +5,17 @@ import { Search, MapPin, Wifi, Car, Clock } from 'lucide-vue-next';
 
 const API_BASE = 'https://uncle-joes-api-539076178854.us-central1.run.app';
 
-const locations = ref<any[]>([]);
+type Location = {
+  id: number | string;
+  city: string;
+  state: string;
+  zip_code: string;
+  address_one: string;
+  wifi?: boolean;
+  drive_thru?: boolean;
+};
+
+const locations = ref<Location[]>([]);
 const loading = ref(true);
 const searchQuery = ref('');
 
@@ -29,6 +39,15 @@ const filteredLocations = computed(() => {
     loc.address_one.toLowerCase().includes(q)
   );
 });
+
+const openDirections = (loc: Location) => {
+  const destination = [loc.address_one, loc.city, loc.state, loc.zip_code]
+    .filter(Boolean)
+    .join(', ');
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+
+  window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+};
 </script>
 
 <template>
@@ -99,7 +118,11 @@ const filteredLocations = computed(() => {
             </div>
           </div>
 
-          <button class="w-full py-4 bg-cream-joe border-2 border-mocha text-mocha font-black uppercase tracking-widest rounded-xl hover:bg-mocha hover:text-white transition-all shadow-lg active:translate-y-1">
+          <button
+            type="button"
+            @click="openDirections(loc)"
+            class="w-full py-4 bg-cream-joe border-2 border-mocha text-mocha font-black uppercase tracking-widest rounded-xl hover:bg-mocha hover:text-white transition-all shadow-lg active:translate-y-1"
+          >
             Get Directions
           </button>
         </div>
