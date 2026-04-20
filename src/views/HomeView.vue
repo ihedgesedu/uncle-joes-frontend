@@ -38,7 +38,7 @@ const featured = [
         <div class="hidden md:block relative">
           <div class="w-[500px] h-[500px] bg-white rounded-full absolute -top-10 -right-10 opacity-10 blur-3xl"></div>
           <img 
-            src="https://images.unsplash.com/photo-1541167760496-162955ed8a9f?auto=format&fit=crop&q=80&w=800" 
+            src="https://isorepublic.com/wp-content/uploads/2020/07/iso-republic-coffee-late-coffee-shop-1100x895.jpg" 
             alt="Delicious Latte" 
             class="rounded-3xl shadow-2xl relative z-10 p-4 bg-white/5 backdrop-blur-3xl border border-white/10"
           />
