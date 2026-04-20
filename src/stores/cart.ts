@@ -36,7 +36,7 @@ export const useCartStore = defineStore('cart', {
       if (!this.selectedStoreId) return;
       this.placingOrder = true;
       try {
-        const orderId = `ORD-${Date.now()}`;
+        const orderId = globalThis.crypto.randomUUID();
         const orderPayload = {
           order_id: orderId,
           member_id: memberId,
@@ -48,7 +48,7 @@ export const useCartStore = defineStore('cart', {
 
         for (const item of this.items) {
           await axios.post(`${API_BASE}/order-items`, {
-            id: `OI-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            id: globalThis.crypto.randomUUID(),
             order_id: orderId,
             menu_item_id: item.id,
             quantity: item.quantity,
