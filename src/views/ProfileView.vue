@@ -190,7 +190,7 @@ const handlePlaceOrder = async () => {
             <div class="pt-10 border-t-2 border-ink space-y-8">
               <div class="flex justify-between items-end">
                 <div>
-                   <p class="text-[10px] font-black uppercase tracking-[0.2em] text-highlight">Total Manifest Value</p>
+                   <p class="text-[10px] font-black uppercase tracking-[0.2em] text-highlight">Total Order Value</p>
                    <h3 class="text-5xl font-serif font-black text-ink leading-none">${{ cartStore.total.toFixed(2) }}</h3>
                 </div>
               </div>
@@ -221,7 +221,7 @@ const handlePlaceOrder = async () => {
                 <div class="space-y-6">
                   <div class="flex justify-between items-start">
                     <div class="space-y-1">
-                       <span class="text-[10px] font-black uppercase tracking-widest text-highlight">Manifest #{{ order.order_id.slice(-8) }}</span>
+                       <span class="text-[10px] font-black uppercase tracking-widest text-highlight">Order #{{ order.order_id.slice(-8) }}</span>
                        <h4 class="text-xl font-serif font-black uppercase text-ink leading-none group-hover:text-mocha transition-colors">{{ getStoreName(order.store_id) }}</h4>
                     </div>
                     <div class="text-right">
@@ -233,7 +233,7 @@ const handlePlaceOrder = async () => {
                       <p class="text-[10px] font-black uppercase tracking-widest text-highlight">Accrued</p>
                       <p class="text-sm font-bold text-latte">{{ Math.floor(order.order_total) }} PTS</p>
                     </div>
-                    <span class="text-[9px] font-bold text-highlight/50 uppercase">Manifested 2026</span>
+                    <span class="text-[9px] font-bold text-highlight/50 uppercase">Ordered 2026</span>
                   </div>
                 </div>
               </div>
