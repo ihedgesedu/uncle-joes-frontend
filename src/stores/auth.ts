@@ -6,6 +6,7 @@ const API_BASE = 'https://uncle-joes-api-539076178854.us-central1.run.app';
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     member: null as any,
+    rewards: null as any,
     isAuthenticated: false,
     loading: false,
     error: null as string | null,
@@ -46,8 +47,25 @@ export const useAuthStore = defineStore('auth', {
         this.logout();
       }
     },
+    async fetchRewards(memberId?: string) {
+      const resolvedMemberId = memberId ?? this.member?.id ?? localStorage.getItem('joe_member_id');
+      if (!resolvedMemberId) {
+        this.rewards = null;
+        return null;
+      }
+
+      try {
+        const res = await axios.get(`${API_BASE}/members/${resolvedMemberId}/rewards`);
+        this.rewards = res.data;
+        return this.rewards;
+      } catch (err) {
+        console.error(err);
+        return null;
+      }
+    },
     logout() {
       this.member = null;
+      this.rewards = null;
       this.isAuthenticated = false;
       localStorage.removeItem('joe_member_id');
     }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
@@ -23,6 +23,21 @@ const handleLogout = () => {
   router.push('/');
   closeMenu();
 };
+
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    authStore.fetchRewards();
+  }
+});
+
+watch(
+  () => authStore.member?.id,
+  (memberId) => {
+    if (memberId) {
+      authStore.fetchRewards(memberId);
+    }
+  }
+);
 </script>
 
 <template>
@@ -47,7 +62,7 @@ const handleLogout = () => {
         <div v-else class="flex items-center gap-6">
           <div class="text-right hidden sm:block">
             <p class="text-[10px] uppercase font-bold tracking-widest text-highlight leading-none">Club Status</p>
-            <p class="text-lg font-black font-mono leading-tight">1,245 PTS</p>
+            <p class="text-lg font-black font-mono leading-tight">{{ authStore.rewards?.points_balance ?? 0 }} PTS</p>
           </div>
           <RouterLink to="/profile" class="w-12 h-12 bg-latte rounded-full border-2 border-mocha flex items-center justify-center hover:scale-105 transition-transform">
             <span class="text-mocha font-bold">{{ authStore.member?.first_name.charAt(0) }}{{ authStore.member?.last_name.charAt(0) }}</span>
@@ -91,7 +106,7 @@ const handleLogout = () => {
           <template v-else>
             <RouterLink to="/profile" @click="closeMenu" class="text-2xl font-black uppercase tracking-tighter border-b border-border-joe pb-3 flex justify-between items-center">
               <span>My Profile</span>
-              <span class="text-sm font-mono text-highlight">1,245 PTS</span>
+              <span class="text-sm font-mono text-highlight">{{ authStore.rewards?.points_balance ?? 0 }} PTS</span>
             </RouterLink>
             <button @click="handleLogout" class="text-left text-xs font-black uppercase tracking-widest text-red-700/60">Sign Out</button>
           </template>

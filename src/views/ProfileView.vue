@@ -21,7 +21,6 @@ const cartStore = useCartStore();
 const router = useRouter();
 
 const orders = ref<any[]>([]);
-const rewards = ref<any>(null);
 const loading = ref(true);
 const locations = ref<any[]>([]);
 const orderSuccess = ref<string | null>(null);
@@ -38,13 +37,12 @@ onMounted(async () => {
   }
 
   try {
-    const [ordersRes, rewardsRes, locationsRes] = await Promise.all([
+    const [ordersRes, _rewards, locationsRes] = await Promise.all([
       axios.get(`${API_BASE}/orders/member/${memberId}`),
-      axios.get(`${API_BASE}/members/${memberId}/rewards`),
+      authStore.fetchRewards(memberId),
       axios.get(`${API_BASE}/locations`)
     ]);
     orders.value = ordersRes.data;
-    rewards.value = rewardsRes.data;
     locations.value = locationsRes.data;
     
     // Default store if not set
@@ -70,8 +68,7 @@ const handlePlaceOrder = async () => {
       // Refresh orders
       const ordersRes = await axios.get(`${API_BASE}/orders/member/${authStore.member?.id}`);
       orders.value = ordersRes.data;
-      const rewardsRes = await axios.get(`${API_BASE}/members/${authStore.member?.id}/rewards`);
-      rewards.value = rewardsRes.data;
+      await authStore.fetchRewards(authStore.member?.id);
     }
   } catch (err) {
     alert("Failed to place order. Please try again.");
@@ -103,8 +100,8 @@ const handlePlaceOrder = async () => {
 
            <div class="bg-black/20 p-8 rounded-3xl border border-white/10 text-center space-y-2">
              <div class="text-[10px] uppercase font-black tracking-[0.3em] text-latte">Accrued Status</div>
-             <div class="text-7xl font-serif font-black">{{ rewards?.points || 0 }}</div>
-             <p class="text-[10px] font-black uppercase tracking-widest text-white/30 pt-2">Points until next reward: {{ 100 - (rewards?.points % 100) }}</p>
+             <div class="text-7xl font-serif font-black">{{ authStore.rewards?.points_balance || 0 }}</div>
+             <p class="text-[10px] font-black uppercase tracking-widest text-white/30 pt-2">Points until next reward: {{ 100 - ((authStore.rewards?.points_balance || 0) % 100) }}</p>
            </div>
            
            <div class="space-y-6 pt-4">
@@ -148,7 +145,7 @@ const handlePlaceOrder = async () => {
             <CheckCircle2 :size="32" class="text-green-400" />
             <div>
               <h4 class="text-2xl font-serif font-black uppercase leading-none">Order Dispatched</h4>
-              <p class="text-white/60 text-xs font-mono mt-1 tracking-widest">Manifest: {{ orderSuccess }}</p>
+              <p class="text-white/60 text-xs font-mono mt-1 tracking-widest">Order: {{ orderSuccess }}</p>
             </div>
           </div>
           <button @click="orderSuccess = null" class="text-[10px] font-black uppercase tracking-widest hover:text-latte transition-colors">Acknowledge</button>
@@ -156,7 +153,7 @@ const handlePlaceOrder = async () => {
 
         <div class="space-y-12">
           <div class="border-b-4 border-ink pb-4">
-            <h2 class="text-6xl font-serif font-black text-ink uppercase leading-none">Review manifesting</h2>
+            <h2 class="text-6xl font-serif font-black text-ink uppercase leading-none">Order History</h2>
           </div>
 
           <!-- Checkout / Current Cart -->
