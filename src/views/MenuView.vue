@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
 import { useCartStore } from '../stores/cart';
 import { Plus, Info, ShoppingBag, Flame, Coffee, X } from 'lucide-vue-next';
@@ -11,6 +11,13 @@ const menuItems = ref<any[]>([]);
 const loading = ref(true);
 const selectedCategory = ref('All');
 const showCartPreview = ref(false);
+const selectedSizeByProduct = ref<Record<string, string>>({});
+
+const SIZE_ORDER: Record<string, number> = {
+  Small: 1,
+  Medium: 2,
+  Large: 3,
+};
 
 onMounted(async () => {
   try {
@@ -34,15 +41,62 @@ const groupedMenu = computed(() => {
     : menuItems.value.filter(item => item.category === selectedCategory.value);
   
   const groups: Record<string, any[]> = {};
-  filtered.forEach(item => {
+  filtered.forEach((item) => {
     if (!groups[item.category]) groups[item.category] = [];
-    groups[item.category].push(item);
+
+    const productKey = `${item.category}::${item.name}`;
+    let product = groups[item.category].find((p) => p.key === productKey);
+    if (!product) {
+      product = {
+        key: productKey,
+        name: item.name,
+        category: item.category,
+        variants: [],
+      };
+      groups[item.category].push(product);
+    }
+
+    product.variants.push(item);
   });
+
+  Object.values(groups).forEach((products) => {
+    products.forEach((product) => {
+      product.variants.sort((a: any, b: any) => (SIZE_ORDER[a.size] ?? 99) - (SIZE_ORDER[b.size] ?? 99));
+    });
+  });
+
   return groups;
 });
 
-const handleAddToCart = (item: any) => {
-  cartStore.addToCart(item);
+watch(
+  groupedMenu,
+  (groups) => {
+    Object.values(groups).forEach((products) => {
+      products.forEach((product: any) => {
+        const currentSize = selectedSizeByProduct.value[product.key];
+        const hasCurrentSize = product.variants.some((variant: any) => variant.size === currentSize);
+        if (!hasCurrentSize && product.variants.length > 0) {
+          selectedSizeByProduct.value[product.key] = product.variants[0].size;
+        }
+      });
+    });
+  },
+  { immediate: true }
+);
+
+const getSelectedVariant = (product: any) => {
+  const selectedSize = selectedSizeByProduct.value[product.key];
+  return product.variants.find((variant: any) => variant.size === selectedSize) ?? product.variants[0];
+};
+
+const selectSize = (product: any, size: string) => {
+  selectedSizeByProduct.value[product.key] = size;
+};
+
+const handleAddToCart = (product: any) => {
+  const variant = getSelectedVariant(product);
+  if (!variant) return;
+  cartStore.addToCart(variant);
   showCartPreview.value = true;
 };
 </script>
@@ -76,32 +130,47 @@ const handleAddToCart = (item: any) => {
     </div>
 
     <div v-else class="space-y-24">
-      <div v-for="(items, category) in groupedMenu" :key="category" class="space-y-12">
+      <div v-for="(products, category) in groupedMenu" :key="category" class="space-y-12">
         <div class="flex justify-between items-end border-b-4 border-ink pb-4">
           <h2 class="text-6xl font-serif font-black text-ink uppercase leading-none">{{ category }}</h2>
-          <span class="text-[10px] font-black uppercase tracking-widest text-highlight mb-2">{{ items.length }} Selection{{ items.length > 1 ? 's' : '' }}</span>
+          <span class="text-[10px] font-black uppercase tracking-widest text-highlight mb-2">{{ products.length }} Item{{ products.length > 1 ? 's' : '' }}</span>
         </div>
         
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-16 gap-y-12">
           <div 
-            v-for="item in items" 
-            :key="item.id"
+            v-for="product in products" 
+            :key="product.key"
             class="group flex justify-between items-start border-b border-border-joe pb-8 hover:border-mocha transition-all"
           >
             <div class="space-y-2 flex-1">
               <div class="flex items-center gap-2">
-                <h3 class="text-2xl font-serif font-black uppercase text-ink group-hover:text-mocha transition-colors">{{ item.name }}</h3>
-                <span v-if="item.calories < 100" class="px-2 py-0.5 bg-green-100 text-green-700 text-[8px] font-black uppercase tracking-widest rounded">Light</span>
+                <h3 class="text-2xl font-serif font-black uppercase text-ink group-hover:text-mocha transition-colors">{{ product.name }}</h3>
+                <span v-if="getSelectedVariant(product)?.calories < 100" class="px-2 py-0.5 bg-green-100 text-green-700 text-[8px] font-black uppercase tracking-widest rounded">Light</span>
               </div>
               <p class="text-[10px] text-highlight font-black tracking-widest uppercase">
-                {{ item.size }} • {{ item.calories }} Cal
+                {{ getSelectedVariant(product)?.size }} • {{ getSelectedVariant(product)?.calories }} Cal
               </p>
+              <div class="flex gap-2 pt-2">
+                <button
+                  v-for="variant in product.variants"
+                  :key="variant.id"
+                  @click="selectSize(product, variant.size)"
+                  :class="[
+                    'px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border transition-colors',
+                    selectedSizeByProduct[product.key] === variant.size
+                      ? 'bg-mocha text-white border-mocha'
+                      : 'bg-white text-highlight border-border-joe hover:border-mocha hover:text-mocha'
+                  ]"
+                >
+                  {{ variant.size }}
+                </button>
+              </div>
             </div>
 
             <div class="flex items-center gap-6">
-              <span class="text-2xl font-mono font-bold text-ink">${{ item.price.toFixed(2) }}</span>
+              <span class="text-2xl font-mono font-bold text-ink">${{ getSelectedVariant(product)?.price.toFixed(2) }}</span>
               <button 
-                @click="handleAddToCart(item)"
+                @click="handleAddToCart(product)"
                 class="w-12 h-12 bg-cream-joe border-2 border-mocha text-mocha rounded-full hover:bg-mocha hover:text-white transition-all flex items-center justify-center shadow-lg active:scale-110"
               >
                 <Plus :size="20" stroke-width="3" />
