@@ -208,7 +208,7 @@ const handleAddToCart = (product: any) => {
         <div class="border-t border-mocha/5 pt-4 text-center">
           <RouterLink 
             to="/profile"
-            class="block w-full py-3 bg-mocha text-cream font-bold rounded shadow-lg hover:bg-espresso transition-colors text-sm"
+            class="block w-full py-3 bg-mocha text-[var(--color-cream-joe)] font-bold rounded shadow-lg hover:bg-espresso transition-colors text-sm"
           >
             Review & Order (${{ cartStore.total.toFixed(2) }})
           </RouterLink>

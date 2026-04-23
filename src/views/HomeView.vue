@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
 import { ArrowRight, Coffee, Heart, Star, TrendingUp } from 'lucide-vue-next';
+
+const authStore = useAuthStore();
 
 const featured = [
   { id: '1', name: 'Mocha Dream', price: 5.25, img: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&q=80&w=400' },
@@ -69,7 +72,7 @@ const featured = [
     </section>
 
     <!-- CTA To Join -->
-    <section class="py-24 bg-white">
+    <section v-if="!authStore.isAuthenticated" class="py-24 bg-white">
       <div class="max-w-4xl mx-auto px-8 text-center space-y-8">
         <h2 class="text-6xl md:text-8xl font-serif font-black text-ink uppercase leading-none">Coffee Club</h2>
         <p class="text-xl text-highlight font-medium">
@@ -77,6 +80,18 @@ const featured = [
         </p>
         <RouterLink to="/login" class="inline-block px-12 py-5 bg-mocha text-white font-black uppercase tracking-widest rounded-xl shadow-2xl hover:translate-y-[-4px] transition-all">
           Join the Club
+        </RouterLink>
+      </div>
+    </section>
+
+    <section v-else class="py-24 bg-white">
+      <div class="max-w-4xl mx-auto px-8 text-center space-y-8">
+        <h2 class="text-6xl md:text-8xl font-serif font-black text-ink uppercase leading-none">Welcome Back</h2>
+        <p class="text-xl text-highlight font-medium">
+          Your club account is active. Check your rewards, order history, and current cart.
+        </p>
+        <RouterLink to="/profile" class="inline-block px-12 py-5 bg-mocha text-white font-black uppercase tracking-widest rounded-xl shadow-2xl hover:translate-y-[-4px] transition-all">
+          Go to Profile
         </RouterLink>
       </div>
     </section>
