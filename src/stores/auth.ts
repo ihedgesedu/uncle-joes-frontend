@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
+import { useCartStore } from './cart';
 
 const API_BASE = 'https://uncle-joes-api-539076178854.us-central1.run.app';
 
@@ -64,9 +65,9 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     logout() {
-      this.member = null;
-      this.rewards = null;
-      this.isAuthenticated = false;
+      const cartStore = useCartStore();
+      this.$reset();
+      cartStore.$reset();
       localStorage.removeItem('joe_member_id');
     }
   }

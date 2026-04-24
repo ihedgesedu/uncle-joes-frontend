@@ -67,6 +67,9 @@ watch(
           <RouterLink to="/profile" class="w-12 h-12 bg-latte rounded-full border-2 border-mocha flex items-center justify-center hover:scale-105 transition-transform">
             <span class="text-mocha font-bold">{{ authStore.member?.first_name.charAt(0) }}{{ authStore.member?.last_name.charAt(0) }}</span>
           </RouterLink>
+          <button @click="handleLogout" class="text-xs font-black uppercase tracking-widest text-red-700/70 hover:text-red-800 transition-colors">
+            Sign Out
+          </button>
         </div>
       </div>
 
