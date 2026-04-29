@@ -22,26 +22,143 @@ const filters = ref({
   wifi: false,
   drive_thru: false,
 });
+const hasInitialized = ref(false);
+const locationPromptVisible = ref(true);
+const locationStatus = ref('Choose how you want to find nearby stores.');
+const userCoords = ref<{ lat: number; lng: number } | null>(null);
+const radiusMiles = ref(50);
+
+const buildAmenityParams = () => {
+  const params: Record<string, boolean> = {};
+  if (filters.value.wifi) params.wifi = true;
+  if (filters.value.drive_thru) params.drive_thru = true;
+  return params;
+};
+
+const getUserPosition = (): Promise<{ lat: number; lng: number }> => {
+  return new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) {
+      reject(new Error('Geolocation not supported'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => resolve({ lat: coords.latitude, lng: coords.longitude }),
+      reject,
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  });
+};
+
+const fetchDefaultLocations = async () => {
+  const amenityParams = buildAmenityParams();
+  try {
+    const topStoresRes = await axios.get(`${API_BASE}/locations`, {
+      params: { limit: 5, ...amenityParams },
+    });
+    if (Array.isArray(topStoresRes.data) && topStoresRes.data.length > 0) {
+      locations.value = topStoresRes.data;
+      return;
+    }
+  } catch (_err) {
+    // Fallback to a broader query below.
+  }
+
+  const res = await axios.get(`${API_BASE}/locations`, { params: amenityParams });
+  locations.value = Array.isArray(res.data) ? res.data.slice(0, 5) : [];
+};
+
+const loadNearbyStores = async () => {
+  if (!userCoords.value) {
+    await fetchDefaultLocations();
+    return;
+  }
+
+  const amenityParams = buildAmenityParams();
+  const { lat, lng } = userCoords.value;
+
+  const within50 = await axios.get(`${API_BASE}/locations/search`, {
+    params: { lat, lng, radiusMiles: radiusMiles.value, limit: 100, ...amenityParams }
+  });
+
+  const nearbyResults = Array.isArray(within50.data)
+    ? within50.data
+    : Array.isArray(within50.data?.items)
+      ? within50.data.items
+      : [];
+
+  if (nearbyResults.length > 0) {
+    locations.value = nearbyResults;
+    return;
+  }
+
+  const nearest5 = await axios.get(`${API_BASE}/locations/search`, {
+    params: { lat, lng, nearest: 5, ...amenityParams }
+  });
+
+  locations.value = Array.isArray(nearest5.data)
+    ? nearest5.data
+    : Array.isArray(nearest5.data?.items)
+      ? nearest5.data.items
+      : [];
+};
 
 const fetchLocations = async () => {
   loading.value = true;
   try {
-    const params: Record<string, boolean> = {};
-    if (filters.value.wifi) params.wifi = true;
-    if (filters.value.drive_thru) params.drive_thru = true;
-
-    const res = await axios.get(`${API_BASE}/locations`, { params });
-    locations.value = res.data;
+    if (userCoords.value) {
+      await loadNearbyStores();
+      locationStatus.value = `Showing stores within ${radiusMiles.value} miles of your location.`;
+    } else {
+      await fetchDefaultLocations();
+      locationStatus.value = 'Showing top nearby stores. Enable location for personalized results.';
+    }
   } catch (err) {
     console.error(err);
+    locationStatus.value = 'Unable to load nearby stores. Showing a fallback list.';
+    await fetchDefaultLocations();
   } finally {
     loading.value = false;
   }
 };
 
-onMounted(fetchLocations);
+const requestLocation = async () => {
+  loading.value = true;
+  locationStatus.value = 'Finding your location...';
+  try {
+    userCoords.value = await getUserPosition();
+    locationPromptVisible.value = false;
+    await fetchLocations();
+  } catch (_err) {
+    userCoords.value = null;
+    locationPromptVisible.value = false;
+    locationStatus.value = 'Location unavailable. Showing top stores instead.';
+    await fetchLocations();
+  } finally {
+    loading.value = false;
+  }
+};
 
-watch(filters, fetchLocations, { deep: true });
+const skipLocation = async () => {
+  userCoords.value = null;
+  locationPromptVisible.value = false;
+  locationStatus.value = 'Location skipped. Showing top stores.';
+  await fetchLocations();
+};
+
+onMounted(async () => {
+  await fetchLocations();
+  hasInitialized.value = true;
+});
+
+watch(
+  [filters, radiusMiles],
+  async () => {
+    if (!hasInitialized.value) return;
+    await fetchLocations();
+  },
+  { deep: true }
+);
 
 const filteredLocations = computed(() => {
   if (!searchQuery.value) return locations.value;
@@ -68,6 +185,49 @@ const openDirections = (loc: Location) => {
     <header class="mb-16 space-y-4">
       <h1 class="text-7xl md:text-9xl font-serif font-black text-ink uppercase leading-none -ml-1">Locations</h1>
       <p class="text-highlight max-w-2xl text-lg font-medium">From Madison to Chicago. Find your local Uncle Joe's sanctuary.</p>
+
+      <div class="max-w-2xl mt-6 p-4 bg-white border border-border-joe rounded-2xl">
+        <p class="text-[10px] font-black uppercase tracking-widest text-highlight mb-2">Store Discovery</p>
+        <p class="text-xs text-highlight mb-3">{{ locationStatus }}</p>
+        <div class="mb-3 max-w-xs">
+          <label class="block text-[10px] font-black uppercase tracking-widest text-highlight mb-2">Search Radius</label>
+          <select
+            v-model.number="radiusMiles"
+            :disabled="!userCoords"
+            class="w-full p-3 bg-cream-joe border border-border-joe rounded-xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-mocha disabled:opacity-50"
+          >
+            <option :value="10">10 miles</option>
+            <option :value="25">25 miles</option>
+            <option :value="50">50 miles</option>
+            <option :value="100">100 miles</option>
+          </select>
+          <p class="text-[10px] text-highlight mt-1" v-if="!userCoords">Enable location to use radius filtering.</p>
+        </div>
+        <div v-if="locationPromptVisible" class="flex flex-wrap gap-3">
+          <button
+            type="button"
+            @click="requestLocation"
+            class="px-4 py-2 bg-mocha text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-ink transition-colors"
+          >
+            Use My Location
+          </button>
+          <button
+            type="button"
+            @click="skipLocation"
+            class="px-4 py-2 bg-cream-joe border border-border-joe text-[10px] font-black uppercase tracking-widest rounded-xl hover:border-mocha transition-colors"
+          >
+            Skip
+          </button>
+        </div>
+        <button
+          v-else
+          type="button"
+          @click="requestLocation"
+          class="px-4 py-2 bg-cream-joe border border-border-joe text-[10px] font-black uppercase tracking-widest rounded-xl hover:border-mocha transition-colors"
+        >
+          Refresh With My Location
+        </button>
+      </div>
       
       <div class="max-w-md relative mt-8">
         <Search class="absolute left-4 top-1/2 -translate-y-1/2 text-highlight" :size="20" />
