@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
 import { Search, MapPin, Wifi, Car, Clock } from 'lucide-vue-next';
 
@@ -18,17 +18,30 @@ type Location = {
 const locations = ref<Location[]>([]);
 const loading = ref(true);
 const searchQuery = ref('');
+const filters = ref({
+  wifi: false,
+  drive_thru: false,
+});
 
-onMounted(async () => {
+const fetchLocations = async () => {
+  loading.value = true;
   try {
-    const res = await axios.get(`${API_BASE}/locations`);
+    const params: Record<string, boolean> = {};
+    if (filters.value.wifi) params.wifi = true;
+    if (filters.value.drive_thru) params.drive_thru = true;
+
+    const res = await axios.get(`${API_BASE}/locations`, { params });
     locations.value = res.data;
   } catch (err) {
     console.error(err);
   } finally {
     loading.value = false;
   }
-});
+};
+
+onMounted(fetchLocations);
+
+watch(filters, fetchLocations, { deep: true });
 
 const filteredLocations = computed(() => {
   if (!searchQuery.value) return locations.value;
@@ -64,6 +77,44 @@ const openDirections = (loc: Location) => {
           placeholder="ENTER CITY OR STATE..." 
           class="w-full pl-12 pr-4 py-4 bg-white border-2 border-border-joe rounded-xl font-black text-xs uppercase tracking-widest focus:outline-none focus:border-mocha transition-all"
         />
+      </div>
+
+      <div class="max-w-2xl mt-6 p-4 bg-white border border-border-joe rounded-2xl">
+        <p class="text-[10px] font-black uppercase tracking-widest text-highlight mb-3">Amenities Legend</p>
+        <div class="flex flex-wrap gap-3">
+          <button
+            type="button"
+            @click="filters.wifi = !filters.wifi"
+            :class="[
+              'inline-flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors',
+              filters.wifi
+                ? 'bg-mocha text-white border-mocha'
+                : 'bg-cream-joe border-border-joe text-ink hover:border-mocha'
+            ]"
+          >
+            <Wifi :size="14" :class="filters.wifi ? 'text-white' : 'text-mocha'" />
+            <span :class="[
+              'text-[10px] font-black uppercase tracking-widest',
+              filters.wifi ? 'text-white' : 'text-ink'
+            ]">Wi-Fi Available</span>
+          </button>
+          <button
+            type="button"
+            @click="filters.drive_thru = !filters.drive_thru"
+            :class="[
+              'inline-flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors',
+              filters.drive_thru
+                ? 'bg-mocha text-white border-mocha'
+                : 'bg-cream-joe border-border-joe text-ink hover:border-mocha'
+            ]"
+          >
+            <Car :size="14" :class="filters.drive_thru ? 'text-white' : 'text-mocha'" />
+            <span :class="[
+              'text-[10px] font-black uppercase tracking-widest',
+              filters.drive_thru ? 'text-white' : 'text-ink'
+            ]">Drive-Thru Available</span>
+          </button>
+        </div>
       </div>
     </header>
 

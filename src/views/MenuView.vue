@@ -106,6 +106,26 @@ const handleAddToCart = (product: any) => {
     <header class="mb-16 space-y-4">
       <h1 class="text-7xl md:text-9xl font-serif font-black text-ink uppercase leading-none -ml-1">The Menu</h1>
       <p class="text-highlight max-w-2xl text-lg font-medium">Rich, smooth, and locally roasted since 1982. Explore our selection of handcrafted perfection.</p>
+      <div class="max-w-2xl mt-6 p-4 bg-white border border-border-joe rounded-2xl">
+        <div class="flex items-center gap-2 mb-3">
+          <Info :size="14" class="text-mocha" />
+          <p class="text-[10px] font-black uppercase tracking-widest text-highlight">Menu Legend</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <div class="inline-flex items-center gap-2 px-3 py-2 bg-cream-joe rounded-xl border border-border-joe">
+            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-[8px] font-black uppercase tracking-widest rounded">Light</span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-ink">Under 100 Calories</span>
+          </div>
+          <div class="inline-flex items-center gap-2 px-3 py-2 bg-cream-joe rounded-xl border border-border-joe">
+            <Coffee :size="14" class="text-mocha" />
+            <span class="text-[10px] font-black uppercase tracking-widest text-ink">Size Selector Changes Nutrition & Price</span>
+          </div>
+          <div class="inline-flex items-center gap-2 px-3 py-2 bg-cream-joe rounded-xl border border-border-joe">
+            <Flame :size="14" class="text-mocha" />
+            <span class="text-[10px] font-black uppercase tracking-widest text-ink">Cal = Calories</span>
+          </div>
+        </div>
+      </div>
     </header>
 
     <!-- Filters -->

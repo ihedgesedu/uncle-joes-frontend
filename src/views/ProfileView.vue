@@ -8,11 +8,12 @@ import {
   User, 
   ShoppingBag, 
   MapPin, 
-  Star, 
   Clock, 
   CheckCircle2, 
-  ChevronRight,
-  AlertCircle
+  Minus,
+  Plus,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-vue-next';
 
 const API_BASE = 'https://uncle-joes-api-539076178854.us-central1.run.app';
@@ -24,6 +25,10 @@ const orders = ref<any[]>([]);
 const loading = ref(true);
 const locations = ref<any[]>([]);
 const orderSuccess = ref<string | null>(null);
+const menuItems = ref<any[]>([]);
+const expandedOrderId = ref<string | null>(null);
+const orderItemsById = ref<Record<string, any[]>>({});
+const orderDetailsLoadingById = ref<Record<string, boolean>>({});
 
 onMounted(async () => {
   const memberId = localStorage.getItem('joe_member_id');
@@ -37,13 +42,15 @@ onMounted(async () => {
   }
 
   try {
-    const [ordersRes, _rewards, locationsRes] = await Promise.all([
+    const [ordersRes, _rewards, locationsRes, menuRes] = await Promise.all([
       axios.get(`${API_BASE}/orders/member/${memberId}`),
       authStore.fetchRewards(memberId),
-      axios.get(`${API_BASE}/locations`)
+      axios.get(`${API_BASE}/locations`),
+      axios.get(`${API_BASE}/menu`)
     ]);
     orders.value = ordersRes.data;
     locations.value = locationsRes.data;
+    menuItems.value = menuRes.data;
     
     // Default store if not set
     if (!cartStore.selectedStoreId && locations.value.length > 0) {
@@ -58,6 +65,53 @@ onMounted(async () => {
 
 const getStoreName = (storeId: string) => {
   return locations.value.find(l => l.id === storeId)?.city || 'Unknown Store';
+};
+
+const getStoreAddress = (storeId: string) => {
+  const location = locations.value.find(l => l.id === storeId);
+  if (!location) return 'Address unavailable';
+  return `${location.address_one}, ${location.city}, ${location.state} ${location.zip_code}`;
+};
+
+const getOrderDateLabel = (order: any) => {
+  const rawDate = order.created_at ?? order.createdAt ?? order.order_date ?? order.ordered_at ?? order.timestamp;
+  if (!rawDate) return 'Date unavailable';
+  const date = new Date(rawDate);
+  if (Number.isNaN(date.getTime())) return 'Date unavailable';
+  const monthLabels = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'Jun.', 'Jul.', 'Aug.', 'Sep.', 'Oct.', 'Nov.', 'Dec.'];
+  return `${monthLabels[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+};
+
+const getItemName = (item: any) => {
+  const match = menuItems.value.find(m => m.id === item.menu_item_id);
+  if (!match) return `Item ${String(item.menu_item_id).slice(-6)}`;
+  const sizeLabel = match.size ? ` (${match.size})` : '';
+  return `${match.name}${sizeLabel}`;
+};
+
+const fetchOrderDetails = async (orderId: string) => {
+  if (orderItemsById.value[orderId]) return;
+
+  orderDetailsLoadingById.value[orderId] = true;
+  try {
+    const res = await axios.get(`${API_BASE}/order-items/${orderId}`);
+    const items = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [];
+    orderItemsById.value[orderId] = items;
+  } catch (err) {
+    console.error(err);
+    orderItemsById.value[orderId] = [];
+  } finally {
+    orderDetailsLoadingById.value[orderId] = false;
+  }
+};
+
+const toggleOrderDetails = async (orderId: string) => {
+  if (expandedOrderId.value === orderId) {
+    expandedOrderId.value = null;
+    return;
+  }
+  expandedOrderId.value = orderId;
+  await fetchOrderDetails(orderId);
 };
 
 const handlePlaceOrder = async () => {
@@ -177,10 +231,10 @@ const handlePlaceOrder = async () => {
                   <span class="text-2xl font-mono font-bold text-ink">${{ (item.price * item.quantity).toFixed(2) }}</span>
                   <div class="flex gap-2">
                     <button @click="cartStore.removeFromCart(item.id)" class="w-8 h-8 rounded-lg bg-cream-joe border border-border-joe flex items-center justify-center hover:bg-mocha hover:text-white transition-all">
-                      <ChevronRight class="rotate-180" :size="14" stroke-width="3" />
+                      <Minus :size="14" stroke-width="3" />
                     </button>
                     <button @click="cartStore.addToCart(item)" class="w-8 h-8 rounded-lg bg-cream-joe border border-border-joe flex items-center justify-center hover:bg-mocha hover:text-white transition-all">
-                      <ChevronRight :size="14" stroke-width="3" />
+                      <Plus :size="14" stroke-width="3" />
                     </button>
                   </div>
                 </div>
@@ -217,23 +271,75 @@ const handlePlaceOrder = async () => {
             </div>
 
             <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div v-for="order in orders" :key="order.order_id" class="bg-white p-8 rounded-[32px] border border-border-joe hover:shadow-xl transition-all group">
+              <div v-for="order in orders" :key="order.order_id" class="bg-white rounded-[32px] border border-border-joe hover:shadow-xl transition-all group overflow-hidden">
                 <div class="space-y-6">
-                  <div class="flex justify-between items-start">
-                    <div class="space-y-1">
-                       <span class="text-[10px] font-black uppercase tracking-widest text-highlight">Order #{{ order.order_id.slice(-8) }}</span>
-                       <h4 class="text-xl font-serif font-black uppercase text-ink leading-none group-hover:text-mocha transition-colors">{{ getStoreName(order.store_id) }}</h4>
+                  <button
+                    type="button"
+                    @click="toggleOrderDetails(order.order_id)"
+                    class="w-full p-8 text-left hover:bg-cream-joe/40 transition-colors"
+                  >
+                    <div class="flex justify-between items-start gap-4">
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-highlight">Order #{{ order.order_id.slice(-8) }}</span>
+                        <h4 class="text-xl font-serif font-black uppercase text-ink leading-none group-hover:text-mocha transition-colors">{{ getStoreName(order.store_id) }}</h4>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-highlight/70">Ordered {{ getOrderDateLabel(order) }}</p>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-2xl font-mono font-bold leading-none">${{ order.order_total.toFixed(2) }}</p>
+                      </div>
                     </div>
-                    <div class="text-right">
-                       <p class="text-2xl font-mono font-bold leading-none">${{ order.order_total.toFixed(2) }}</p>
+                    <div class="flex justify-between items-end pt-4 border-t border-border-joe/50 mt-6">
+                      <div class="space-y-1">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-highlight">Accrued</p>
+                        <p class="text-sm font-bold text-latte">{{ Math.floor(order.order_total) }} PTS</p>
+                      </div>
+                      <div class="flex items-center gap-2 text-highlight/70">
+                        <span class="text-[9px] font-bold uppercase">View Details</span>
+                        <ChevronUp v-if="expandedOrderId === order.order_id" :size="14" />
+                        <ChevronDown v-else :size="14" />
+                      </div>
                     </div>
-                  </div>
-                  <div class="flex justify-between items-end pt-4 border-t border-border-joe/50">
-                    <div class="space-y-1">
-                      <p class="text-[10px] font-black uppercase tracking-widest text-highlight">Accrued</p>
-                      <p class="text-sm font-bold text-latte">{{ Math.floor(order.order_total) }} PTS</p>
+                  </button>
+
+                  <div v-if="expandedOrderId === order.order_id" class="px-8 pb-8 -mt-2">
+                    <div class="rounded-2xl border border-border-joe bg-cream-joe p-5 space-y-4">
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div>
+                          <p class="text-[10px] font-black uppercase tracking-widest text-highlight">Ordered</p>
+                          <p class="font-semibold text-ink">{{ getOrderDateLabel(order) }}</p>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-black uppercase tracking-widest text-highlight">Location</p>
+                          <p class="font-semibold text-ink">{{ getStoreAddress(order.store_id) }}</p>
+                        </div>
+                      </div>
+
+                      <div class="pt-2 border-t border-border-joe">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-highlight mb-2">Order Items</p>
+                        <p v-if="orderDetailsLoadingById[order.order_id]" class="text-xs text-highlight">Loading items...</p>
+                        <div v-else-if="(orderItemsById[order.order_id] ?? []).length === 0" class="text-xs text-highlight">
+                          Item details are unavailable for this order.
+                        </div>
+                        <div v-else class="space-y-2">
+                          <div
+                            v-for="item in (orderItemsById[order.order_id] ?? [])"
+                            :key="item.id"
+                            class="flex justify-between items-start gap-4 text-xs"
+                          >
+                            <div>
+                              <p class="font-bold text-ink">{{ getItemName(item) }}</p>
+                              <p class="text-highlight uppercase tracking-wider">Qty {{ item.quantity }}</p>
+                            </div>
+                            <p class="font-mono font-bold text-ink">${{ (item.price * item.quantity).toFixed(2) }}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="pt-2 border-t border-border-joe flex justify-between items-center">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-highlight">Points Accrued</p>
+                        <p class="text-sm font-bold text-latte">{{ Math.floor(order.order_total) }} PTS</p>
+                      </div>
                     </div>
-                    <span class="text-[9px] font-bold text-highlight/50 uppercase">Ordered 2026</span>
                   </div>
                 </div>
               </div>
