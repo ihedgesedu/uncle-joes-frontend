@@ -18,6 +18,7 @@ type Location = {
 const locations = ref<Location[]>([]);
 const loading = ref(true);
 const searchQuery = ref('');
+const selectedState = ref('');
 const filters = ref({
   wifi: false,
   drive_thru: false,
@@ -27,6 +28,44 @@ const locationPromptVisible = ref(true);
 const locationStatus = ref('Choose how you want to find nearby stores.');
 const userCoords = ref<{ lat: number; lng: number } | null>(null);
 const radiusMiles = ref(50);
+
+const STATE_NAME_TO_ABBR: Record<string, string> = {
+  alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA',
+  colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA',
+  hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA',
+  kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD',
+  massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS', missouri: 'MO',
+  montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+  'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH',
+  oklahoma: 'OK', oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT',
+  virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI', wyoming: 'WY'
+};
+
+const STATE_OPTIONS = [
+  { name: 'Alabama', abbr: 'AL' }, { name: 'Alaska', abbr: 'AK' }, { name: 'Arizona', abbr: 'AZ' }, { name: 'Arkansas', abbr: 'AR' },
+  { name: 'California', abbr: 'CA' }, { name: 'Colorado', abbr: 'CO' }, { name: 'Connecticut', abbr: 'CT' }, { name: 'Delaware', abbr: 'DE' },
+  { name: 'Florida', abbr: 'FL' }, { name: 'Georgia', abbr: 'GA' }, { name: 'Hawaii', abbr: 'HI' }, { name: 'Idaho', abbr: 'ID' },
+  { name: 'Illinois', abbr: 'IL' }, { name: 'Indiana', abbr: 'IN' }, { name: 'Iowa', abbr: 'IA' }, { name: 'Kansas', abbr: 'KS' },
+  { name: 'Kentucky', abbr: 'KY' }, { name: 'Louisiana', abbr: 'LA' }, { name: 'Maine', abbr: 'ME' }, { name: 'Maryland', abbr: 'MD' },
+  { name: 'Massachusetts', abbr: 'MA' }, { name: 'Michigan', abbr: 'MI' }, { name: 'Minnesota', abbr: 'MN' }, { name: 'Mississippi', abbr: 'MS' },
+  { name: 'Missouri', abbr: 'MO' }, { name: 'Montana', abbr: 'MT' }, { name: 'Nebraska', abbr: 'NE' }, { name: 'Nevada', abbr: 'NV' },
+  { name: 'New Hampshire', abbr: 'NH' }, { name: 'New Jersey', abbr: 'NJ' }, { name: 'New Mexico', abbr: 'NM' }, { name: 'New York', abbr: 'NY' },
+  { name: 'North Carolina', abbr: 'NC' }, { name: 'North Dakota', abbr: 'ND' }, { name: 'Ohio', abbr: 'OH' }, { name: 'Oklahoma', abbr: 'OK' },
+  { name: 'Oregon', abbr: 'OR' }, { name: 'Pennsylvania', abbr: 'PA' }, { name: 'Rhode Island', abbr: 'RI' }, { name: 'South Carolina', abbr: 'SC' },
+  { name: 'South Dakota', abbr: 'SD' }, { name: 'Tennessee', abbr: 'TN' }, { name: 'Texas', abbr: 'TX' }, { name: 'Utah', abbr: 'UT' },
+  { name: 'Vermont', abbr: 'VT' }, { name: 'Virginia', abbr: 'VA' }, { name: 'Washington', abbr: 'WA' }, { name: 'West Virginia', abbr: 'WV' },
+  { name: 'Wisconsin', abbr: 'WI' }, { name: 'Wyoming', abbr: 'WY' }
+];
+
+const normalizeStateSearchTerm = (query: string) => {
+  const lowered = query.trim().toLowerCase();
+  const stateAbbr = STATE_NAME_TO_ABBR[lowered];
+  return {
+    lowered,
+    stateAbbr: stateAbbr ? stateAbbr.toLowerCase() : null
+  };
+};
 
 const buildAmenityParams = () => {
   const params: Record<string, boolean> = {};
@@ -161,13 +200,21 @@ watch(
 );
 
 const filteredLocations = computed(() => {
-  if (!searchQuery.value) return locations.value;
-  const q = searchQuery.value.toLowerCase();
-  return locations.value.filter(loc => 
-    loc.city.toLowerCase().includes(q) || 
-    loc.state.toLowerCase().includes(q) || 
-    loc.address_one.toLowerCase().includes(q)
-  );
+  const { lowered, stateAbbr } = normalizeStateSearchTerm(searchQuery.value);
+
+  return locations.value.filter((loc) => {
+    const locationState = String(loc.state || '').toLowerCase();
+    const matchesStateDropdown = !selectedState.value || locationState === selectedState.value.toLowerCase();
+    if (!matchesStateDropdown) return false;
+    if (!lowered) return true;
+
+    return (
+      loc.city.toLowerCase().includes(lowered) ||
+      locationState.includes(lowered) ||
+      loc.address_one.toLowerCase().includes(lowered) ||
+      (stateAbbr !== null && locationState === stateAbbr)
+    );
+  });
 });
 
 const openDirections = (loc: Location) => {
@@ -229,7 +276,8 @@ const openDirections = (loc: Location) => {
         </button>
       </div>
       
-      <div class="max-w-md relative mt-8">
+      <div class="max-w-2xl mt-8 grid grid-cols-1 md:grid-cols-[1fr_220px] gap-3">
+        <div class="relative">
         <Search class="absolute left-4 top-1/2 -translate-y-1/2 text-highlight" :size="20" />
         <input 
           v-model="searchQuery"
@@ -237,6 +285,16 @@ const openDirections = (loc: Location) => {
           placeholder="ENTER CITY OR STATE..." 
           class="w-full pl-12 pr-4 py-4 bg-white border-2 border-border-joe rounded-xl font-black text-xs uppercase tracking-widest focus:outline-none focus:border-mocha transition-all"
         />
+        </div>
+        <select
+          v-model="selectedState"
+          class="w-full py-4 px-4 bg-white border-2 border-border-joe rounded-xl font-black text-xs uppercase tracking-widest focus:outline-none focus:border-mocha"
+        >
+          <option value="">ALL STATES</option>
+          <option v-for="state in STATE_OPTIONS" :key="state.abbr" :value="state.abbr">
+            {{ state.name }} ({{ state.abbr }})
+          </option>
+        </select>
       </div>
 
       <div class="max-w-2xl mt-6 p-4 bg-white border border-border-joe rounded-2xl">
